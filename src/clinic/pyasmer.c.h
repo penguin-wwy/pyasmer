@@ -1,0 +1,60 @@
+/*[clinic input]
+preserve
+[clinic start generated code]*/
+
+PyDoc_STRVAR(_pyasmer_reset_code_object__doc__,
+"reset_code_object($module, code, /, *, code_bytes=None,\n"
+"                  consts_array=None, names_array=None)\n"
+"--\n"
+"\n"
+"Reload module.");
+
+#define _PYASMER_RESET_CODE_OBJECT_METHODDEF    \
+    {"reset_code_object", (PyCFunction)(void(*)(void))_pyasmer_reset_code_object, METH_FASTCALL|METH_KEYWORDS, _pyasmer_reset_code_object__doc__},
+
+static PyObject *
+_pyasmer_reset_code_object_impl(PyObject *module, PyObject *code,
+                                PyObject *code_bytes, PyObject *consts_array,
+                                PyObject *names_array);
+
+static PyObject *
+_pyasmer_reset_code_object(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *return_value = NULL;
+    static const char * const _keywords[] = {"", "code_bytes", "consts_array", "names_array", NULL};
+    static _PyArg_Parser _parser = {NULL, _keywords, "reset_code_object", 0};
+    PyObject *argsbuf[4];
+    Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 1;
+    PyObject *code;
+    PyObject *code_bytes = Py_None;
+    PyObject *consts_array = Py_None;
+    PyObject *names_array = Py_None;
+
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 1, 1, 0, argsbuf);
+    if (!args) {
+        goto exit;
+    }
+    code = args[0];
+    if (!noptargs) {
+        goto skip_optional_kwonly;
+    }
+    if (args[1]) {
+        code_bytes = args[1];
+        if (!--noptargs) {
+            goto skip_optional_kwonly;
+        }
+    }
+    if (args[2]) {
+        consts_array = args[2];
+        if (!--noptargs) {
+            goto skip_optional_kwonly;
+        }
+    }
+    names_array = args[3];
+skip_optional_kwonly:
+    return_value = _pyasmer_reset_code_object_impl(module, code, code_bytes, consts_array, names_array);
+
+exit:
+    return return_value;
+}
+/*[clinic end generated code: output=cf4be9266e7ba8a8 input=a9049054013a1b77]*/
