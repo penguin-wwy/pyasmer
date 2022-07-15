@@ -1,17 +1,16 @@
 import dis
 
 import fib
-from pyasmer.code_view import CodeViewer
+from pyasmer.asm_instruction import AsmElement, AsmElemType
+from pyasmer.code_writer import CodeWriter
 
 if __name__ == '__main__':
-    cv = CodeViewer(fib.fib.__code__)()
-    print(cv)
+    cw = CodeWriter(fib.fib.__code__)()
+    print(cw)
+    print(dis.dis(fib.fib))
     print("====================================")
-    cv.insert_inst(0, 'LOAD_GLOBAL', 'print')
-    cv.insert_inst(1, 'LOAD_FAST', 'num')
-    cv.insert_inst(2, 'CALL_FUNCTION', 1)
-    cv.insert_inst(3, 'POP_TOP')
-    print(cv)
-    cv.gen_code()
+    cw.call_function(0, None, AsmElement('print', AsmElemType.ASM_GLOBAL), AsmElement('num', AsmElemType.ASM_VARIABLE))
+    print(cw)
+    cw.gen_code()
     print(dis.dis(fib.fib))
     print(fib.fib(4))

@@ -4,7 +4,7 @@ import sys
 from types import CodeType
 from typing import List, Dict
 
-import _pyasmer
+from pyasmer.asm_instruction import AsmInstruction
 
 SELF_MODULE = sys.modules[__name__]
 
@@ -36,15 +36,6 @@ def _inst_op(inst_name):
 def _inst_chunks(code_array: bytes):
     for i in range(0, len(code_array), 2):
         yield code_array[i:i + 2]
-
-
-class AsmInstruction:
-    def __init__(self, inst_op, oparg):
-        self.inst_op = inst_op
-        self.oparg = oparg
-
-    def __str__(self):
-        return f"({self.inst_op}, {self.oparg})"
 
 
 class CodeViewer:
@@ -91,11 +82,7 @@ class CodeViewer:
             self._inst_list.append(self._parse_inst(inst_op, oparg))
 
     def insert_inst(self, index, inst_name, oparg=0):
-        self._inst_list.insert(index, AsmInstruction(inst_name, oparg))
-        for item in filter(lambda x: x[0] > index, self._jabs_map.items()):
-            for inst in item[1]:
-                inst.oparg += 1
-        # TODO: relation jump
+        pass
 
     def _gen_inst(self, inst_name, oparg):
         inst_op = _inst_op(inst_name)
@@ -110,6 +97,7 @@ class CodeViewer:
         return inst_op, oparg
 
     def gen_code(self):
+        import _pyasmer
         code_bytes = []
         for item in map(lambda x: self._gen_inst(x.inst_op, x.oparg), self._inst_list):
             code_bytes.extend(item)

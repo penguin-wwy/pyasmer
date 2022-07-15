@@ -1,5 +1,4 @@
 def fib(num):
-    print(num)
     if num == 0:
         return 0
     elif num == 1 or num == 2:
