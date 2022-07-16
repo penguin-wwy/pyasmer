@@ -1,36 +1,13 @@
-import opcode
-import operator
 import sys
 from types import CodeType
 from typing import List, Dict
 
+from pyasmer import op_help
 from pyasmer.asm_instruction import AsmInstruction
+from pyasmer.op_help import to_inst_name, has_jabs, to_inst_op
 
 SELF_MODULE = sys.modules[__name__]
-
-
-def _has_const(inst_op):
-    return inst_op in opcode.hasconst
-
-
-def _has_name(inst_op):
-    return inst_op in opcode.hasname
-
-
-def _has_local(inst_op):
-    return inst_op in opcode.haslocal
-
-
-def _has_jabs(inst_op):
-    return inst_op in opcode.hasjabs
-
-
-def _inst_name(inst_op):
-    return opcode.opname[inst_op]
-
-
-def _inst_op(inst_name):
-    return opcode.opmap[inst_name]
+HELP_MODULE = op_help
 
 
 def _inst_chunks(code_array: bytes):
@@ -66,10 +43,10 @@ class CodeViewer:
 
     def _parse_inst(self, inst_op, oparg) -> AsmInstruction:
         for attr_name in CodeViewer.ATTR_NAMES:
-            if getattr(SELF_MODULE, f"_has_{attr_name}")(inst_op):
-                return AsmInstruction(_inst_name(inst_op), getattr(self, f"get_{attr_name}")(oparg))
-        result = AsmInstruction(_inst_name(inst_op), oparg)
-        if _has_jabs(inst_op):
+            if getattr(HELP_MODULE, f"has_{attr_name}")(inst_op):
+                return AsmInstruction(to_inst_name(inst_op), getattr(self, f"get_{attr_name}")(oparg))
+        result = AsmInstruction(to_inst_name(inst_op), oparg)
+        if has_jabs(inst_op):
             # Note: 3.10 jump
             self.jabs_map_or_default(oparg).append(result)
         return result
@@ -85,9 +62,9 @@ class CodeViewer:
         pass
 
     def _gen_inst(self, inst_name, oparg):
-        inst_op = _inst_op(inst_name)
+        inst_op = to_inst_op(inst_name)
         for attr_name in CodeViewer.ATTR_NAMES:
-            if getattr(SELF_MODULE, f"_has_{attr_name}")(inst_op):
+            if getattr(HELP_MODULE, f"has_{attr_name}")(inst_op):
                 if attr_name == "local" and oparg not in self._local_map:
                     raise NameError("TODO append variable")
                 attr_map = getattr(self, f"_{attr_name}_map")
@@ -97,13 +74,7 @@ class CodeViewer:
         return inst_op, oparg
 
     def gen_code(self):
-        import _pyasmer
-        code_bytes = []
-        for item in map(lambda x: self._gen_inst(x.inst_op, x.oparg), self._inst_list):
-            code_bytes.extend(item)
-        name_array = [x[0] for x in sorted(self._name_map.items(), key=operator.itemgetter(1))]
-        const_array = [x[0] for x in sorted(self._const_map.items(), key=operator.itemgetter(1))]
-        return _pyasmer.reset_code_object(self._code_obj, code_bytes=bytes(code_bytes), consts_array=tuple(const_array), names_array=tuple(name_array))
+        pass
 
     def __call__(self, *args, **kwargs):
         self._parse_code()

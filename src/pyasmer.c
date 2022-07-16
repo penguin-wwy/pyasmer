@@ -16,6 +16,7 @@ _pyasmer.reset_code_object -> object
   code_bytes: object = None
   consts_array: object = None
   names_array: object = None
+  stack_size: int = 0
 
 Reload module.
 [clinic start generated code]*/
@@ -23,8 +24,8 @@ Reload module.
 static PyObject *
 _pyasmer_reset_code_object_impl(PyObject *module, PyObject *code,
                                 PyObject *code_bytes, PyObject *consts_array,
-                                PyObject *names_array)
-/*[clinic end generated code: output=bef5b7900ea8754a input=8a856b4132d13bfb]*/
+                                PyObject *names_array, int stack_size)
+/*[clinic end generated code: output=166502b43580dd4f input=303b2503a3bd6a9a]*/
 {
     assert(PyCode_Check(code));
     PyCodeObject *co = (PyCodeObject *) code;
@@ -43,6 +44,9 @@ _pyasmer_reset_code_object_impl(PyObject *module, PyObject *code,
         old_obj = co->co_names;
         co->co_names = Py_NewRef(names_array);
         Py_DECREF(old_obj);
+    }
+    if (stack_size) {
+        co->co_stacksize = stack_size;
     }
     Py_INCREF(Py_None);
     return Py_None;
