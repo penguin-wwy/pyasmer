@@ -1,7 +1,7 @@
 import operator
 
 from pyasmer.code_view import CodeViewer, HELP_MODULE
-from pyasmer.asm_instruction import AsmInstruction, AsmElement
+from pyasmer.asm_instruction import AsmInstruction, AsmElement, asm_attr_var
 
 
 class CodeWriter(CodeViewer):
@@ -37,9 +37,26 @@ class CodeWriter(CodeViewer):
         # return opcode.stack_effect(HELP_MODULE.to_inst_op(inst_name))
 
     def call_function(self, index, retval: AsmElement | None, function: AsmElement, *args: AsmElement):
-        self.insert_inst(index, *function.load_inst)
-        for i in range(1, len(args) + 1):
-            self.insert_inst(index + i, *args[-i].load_inst)
-        self.insert_inst(index + len(args) + 1, 'CALL_FUNCTION', len(args))
-        self.insert_inst(index + len(args) + 2, *retval.store_inst if retval else 'POP_TOP')
+        next_index = function.gen_load_inst(self, index)
+        for arg in reversed(args):
+            next_index = arg.gen_load_inst(self, next_index)
+        self.insert_inst(next_index, 'CALL_FUNCTION', len(args))
+        next_index += 1
+        if retval:
+            next_index = retval.gen_store_inst(self, next_index)
+        else:
+            self.insert_inst(index + len(args) + 2, 'POP_TOP')
+            next_index += 1
         self._inc_stack_size = max(len(args) + 1, self._inc_stack_size)
+        return next_index
+
+    def load_attribute(self, index, dest: AsmElement | None, owner: AsmElement, *, attr_name: str = None):
+        if isinstance(owner, asm_attr_var):
+            next_index = owner.gen_load_inst(self, index)
+        else:
+            assert attr_name is not None
+            next_index = asm_attr_var(owner, attr_name).gen_load_inst(self, index)
+        if dest:
+            dest.gen_store_inst(self, next_index)
+        self._inc_stack_size = max(1, self._inc_stack_size)
+        return next_index + 1
