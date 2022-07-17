@@ -57,6 +57,11 @@ _pyasmer_reset_code_object(PyObject *module, PyObject *const *args, Py_ssize_t n
             goto skip_optional_kwonly;
         }
     }
+    if (PyFloat_Check(args[4])) {
+        PyErr_SetString(PyExc_TypeError,
+                        "integer argument expected, got float" );
+        goto exit;
+    }
     stack_size = _PyLong_AsInt(args[4]);
     if (stack_size == -1 && PyErr_Occurred()) {
         goto exit;
@@ -67,4 +72,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=9b5d3ad167e35947 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=c2c0da33f99f64cd input=a9049054013a1b77]*/

@@ -22,8 +22,9 @@ PYASMER_EXTENSION = Extension(
 
 setup(
     name="pyasmer",
+    author_email="940375606@qq.com",
     version="0.1",
-    python_requires=">=3.10.0",
+    python_requires=">=3.6,<3.11",
     description="pyasmer",
     long_description="",
     long_description_content_type="text/markdown",
@@ -33,6 +34,10 @@ setup(
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Operating System :: POSIX :: Linux",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: Implementation :: CPython",
     ],

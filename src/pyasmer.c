@@ -1,5 +1,15 @@
 #include "Python.h"
-#include "clinic/pyasmer.c.h"
+#if PY_MINOR_VERSION == 6
+#include "clinic/v3_6.h"
+#elif PY_MINOR_VERSION == 7
+#include "clinic/v3_7.h"
+#elif PY_MINOR_VERSION == 8
+#include "clinic/v3_8.h"
+#elif PY_MINOR_VERSION == 9
+#include "clinic/v3_9.h"
+#elif PY_MINOR_VERSION == 10
+#include "clinic/v3_10.h"
+#endif
 
 /*[clinic input]
 module _pyasmer
@@ -32,17 +42,20 @@ _pyasmer_reset_code_object_impl(PyObject *module, PyObject *code,
     PyObject *old_obj = NULL;
     if (code_bytes != Py_None) {
         old_obj = co->co_code;
-        co->co_code = Py_NewRef(code_bytes);
+        Py_INCREF(code_bytes);
+        co->co_code = code_bytes;
         Py_DECREF(old_obj);
     }
     if (consts_array != Py_None) {
         old_obj = co->co_consts;
-        co->co_consts = Py_NewRef(consts_array);
+        Py_INCREF(consts_array);
+        co->co_consts = consts_array;
         Py_DECREF(old_obj);
     }
     if (names_array != Py_None) {
         old_obj = co->co_names;
-        co->co_names = Py_NewRef(names_array);
+        Py_INCREF(names_array);
+        co->co_names = names_array;
         Py_DECREF(old_obj);
     }
     if (stack_size) {

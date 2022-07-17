@@ -1,4 +1,7 @@
 import enum
+from typing import Optional
+
+from pyasmer.op_help import is_abs_jump, to_inst_name
 
 _ELEM_LOAD = ['', 'LOAD_FAST', 'LOAD_CONST', 'LOAD_NAME', 'LOAD_GLOBAL', 'LOAD_ATTR']
 _ELEM_STORE = ['', 'STORE_FAST', '', 'STORE_NAME', 'STORE_GLOBAL', 'STORE_ATTR']
@@ -78,9 +81,35 @@ asm_attr_var = AsmAttrVarElem
 
 
 class AsmInstruction:
-    def __init__(self, inst_op, oparg):
+    def __init__(self, offset, inst_op, oparg):
+        self.inst_name = to_inst_name(inst_op)
         self.inst_op = inst_op
         self.oparg = oparg
+        self.offset = offset
+
+    def __iter__(self):
+        return iter((self.offset, self.inst_op, self.oparg))
 
     def __str__(self):
-        return f"({self.inst_op}, {self.oparg})"
+        return f"({self.offset}, {self.inst_name}, {self.oparg})"
+
+    def promote(self, cls, *args):
+        self.__class__ = cls
+        cls.promote_by(*([self] + list(args)))
+
+
+class JumpInstruction(AsmInstruction):
+    def __init__(self, offset, inst_op, oparg):
+        super(JumpInstruction, self).__init__(offset, inst_op, oparg)
+        self._jump_target: Optional[AsmInstruction] = None
+        self._hax_next = not is_abs_jump(self.inst_name)
+
+    @property
+    def jump_target(self):
+        return self._jump_target.offset
+
+    @classmethod
+    def promote_by(cls, inst: 'JumpInstruction', target: AsmInstruction):
+        inst._hax_next = not is_abs_jump(inst.inst_name)
+        inst._jump_target = target
+        return inst
