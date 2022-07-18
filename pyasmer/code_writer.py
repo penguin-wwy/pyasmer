@@ -13,18 +13,18 @@ class CodeWriter(CodeViewer):
         self._inc_stack_size = 0
 
     def _gen_inst(self, inst: AsmInstruction):
-        offset, inst_op, oparg = inst
+        offset, inst_op, oparg_value = inst
         if isinstance(inst, JumpInstruction):
             return inst_op, jump_oparg(offset, inst_op, inst.jump_target)
         for attr_name in CodeViewer.ATTR_NAMES:
             if getattr(HELP_MODULE, f"has_{attr_name}")(inst_op):
-                if attr_name == "local" and oparg not in self._local_map:
+                if attr_name == "local" and oparg_value not in self._local_map:
                     raise NameError("TODO append variable")
                 attr_map = getattr(self, f"_{attr_name}_map")
-                if oparg not in attr_map:
-                    attr_map[oparg] = len(attr_map)
-                return inst_op, attr_map[oparg]
-        return inst_op, oparg
+                if oparg_value not in attr_map:
+                    attr_map[oparg_value] = len(attr_map)
+                return inst_op, attr_map[oparg_value]
+        return inst_op, oparg_value
 
     def gen_code(self):
         self.update_offset()
@@ -46,11 +46,6 @@ class CodeWriter(CodeViewer):
     def insert_inst(self, index, inst_name, oparg=0):
         # TODO: pass offset
         self._inst_list.insert(index, AsmInstruction(index * 2, to_inst_op(inst_name), oparg))
-        for item in filter(lambda x: x[0] > index, self._jabs_map.items()):
-            for inst in item[1]:
-                # TODO: relation jump
-                inst.oparg += 1
-
         # TODO: pass oparg
         # return opcode.stack_effect(HELP_MODULE.to_inst_op(inst_name))
 
@@ -68,12 +63,10 @@ class CodeWriter(CodeViewer):
         self._inc_stack_size = max(len(args) + 1, self._inc_stack_size)
         return next_index
 
-    def load_attribute(self, index, dest: Optional[AsmElement], owner: AsmElement, *, attr_name: str = None):
-        if isinstance(owner, asm_attr_var):
-            next_index = owner.gen_load_inst(self, index)
-        else:
-            assert attr_name is not None
-            next_index = asm_attr_var(owner, attr_name).gen_load_inst(self, index)
+    def load_attribute(self, index, dest: Optional[AsmElement], owner: AsmElement, attr_name: AsmElement):
+        next_index = owner.gen_load_inst(self, index)
+        assert isinstance(attr_name, asm_attr_var)
+        next_index = attr_name.gen_load_inst(self, next_index)
         if dest:
             dest.gen_store_inst(self, next_index)
         self._inc_stack_size = max(1, self._inc_stack_size)

@@ -4,7 +4,7 @@ from typing import List, Dict
 
 from pyasmer import op_help
 from pyasmer.asm_instruction import AsmInstruction, JumpInstruction
-from pyasmer.op_help import has_jabs, has_jrel, jump_target, jump_oparg
+from pyasmer.op_help import has_jabs, has_jrel, jump_target
 
 SELF_MODULE = sys.modules[__name__]
 HELP_MODULE = op_help
@@ -22,15 +22,9 @@ class CodeViewer:
     def __init__(self, co):
         self._code_obj: CodeType = co
         self._inst_list: List[AsmInstruction] = []
-        self._jabs_map: Dict = {}
         self._name_map: Dict
         self._const_map: Dict
         self._local_map: Dict
-
-    def jabs_map_or_default(self, k) -> List:
-        if k not in self._jabs_map:
-            self._jabs_map[k] = []
-        return self._jabs_map[k]
 
     def get_name(self, index):
         return self._code_obj.co_names[index]
@@ -46,6 +40,11 @@ class CodeViewer:
             return self._inst_list[offset // 2]
         else:
             raise AssertionError("Offset error")
+
+    def find_index_by_inst_name(self, inst_name):
+        for i in range(len(self._inst_list)):
+            if self._inst_list[i].inst_name == inst_name:
+                yield i
 
     def _parse_jump(self):
         for inst in self._inst_list:

@@ -1,14 +1,26 @@
 import enum
+import sys
 from typing import Optional
 
 from pyasmer.op_help import is_abs_jump, to_inst_name
 
-_ELEM_LOAD = ['', 'LOAD_FAST', 'LOAD_CONST', 'LOAD_NAME', 'LOAD_GLOBAL', 'LOAD_ATTR']
-_ELEM_STORE = ['', 'STORE_FAST', '', 'STORE_NAME', 'STORE_GLOBAL', 'STORE_ATTR']
+_SELF_MODULE = sys.modules[__name__]
+
+_ELEM_LOAD = [None, 'LOAD_FAST', 'LOAD_CONST', 'LOAD_NAME', 'LOAD_GLOBAL', 'LOAD_ATTR']
+_ELEM_STORE = [None, 'STORE_FAST', '', 'STORE_NAME', 'STORE_GLOBAL', 'STORE_ATTR']
 
 
-class AsmElemType(enum.IntEnum):
-    ASM_VARIABLE = 1
+class _AsmElemTypeMeta(enum.EnumMeta):
+
+    def __getitem__(self, item):
+        if item not in self._member_map_:
+            return self._member_map_['ASM_DEFAULT']
+        return self._member_map_[item]
+
+
+class AsmElemType(enum.IntEnum, metaclass=_AsmElemTypeMeta):
+    ASM_DEFAULT = 0
+    ASM_FAST = 1
     ASM_CONST = 2
     ASM_NAME = 3
     ASM_GLOBAL = 4
@@ -20,12 +32,19 @@ class AsmElemType(enum.IntEnum):
     def store(self):
         return _ELEM_STORE[self.value]
 
+    def contribute(self, *args, **kwargs):
+        return getattr(_SELF_MODULE, f"{self.name.lower()}_var")(*args, **kwargs)
+
 
 class AsmElement:
 
     def __init__(self, value, val_tp: AsmElemType):
         self._value = value
         self._val_tp = val_tp
+
+    @property
+    def value(self):
+        return self._value
 
     @property
     def load_inst(self):
@@ -44,10 +63,10 @@ class AsmElement:
         return index + 1
 
 
-class AsmLocalVarElem(AsmElement):
+class AsmFastVarElem(AsmElement):
 
     def __init__(self, varname):
-        super(AsmLocalVarElem, self).__init__(varname, AsmElemType.ASM_VARIABLE)
+        super(AsmFastVarElem, self).__init__(varname, AsmElemType.ASM_FAST)
 
 
 class AsmConstVarElem(AsmElement):
@@ -64,31 +83,30 @@ class AsmGlobalVarElem(AsmElement):
 
 class AsmAttrVarElem(AsmElement):
 
-    def __init__(self, owner: AsmElement, attr_name):
+    def __init__(self, attr_name):
         super(AsmAttrVarElem, self).__init__(attr_name, AsmElemType.ASM_ATTR)
-        self._owner = owner
-
-    def gen_load_inst(self, cw, index):
-        self._owner.gen_load_inst(cw, index)
-        cw.insert_inst(index + 1, *self.load_inst)
-        return index + 2
 
 
-asm_local_var = AsmLocalVarElem
+asm_default_var = lambda o: AsmElement(o, AsmElemType.ASM_DEFAULT)
+asm_fast_var = AsmFastVarElem
 asm_const_var = AsmConstVarElem
 asm_global_var = AsmGlobalVarElem
 asm_attr_var = AsmAttrVarElem
+
+
+def _get_suffix_type(inst_name: str) -> AsmElemType:
+    return AsmElemType[f"ASM_{inst_name.split('_')[-1]}"]
 
 
 class AsmInstruction:
     def __init__(self, offset, inst_op, oparg):
         self.inst_name = to_inst_name(inst_op)
         self.inst_op = inst_op
-        self.oparg = oparg
+        self.oparg = _get_suffix_type(self.inst_name).contribute(oparg) if not isinstance(oparg, AsmElement) else oparg
         self.offset = offset
 
     def __iter__(self):
-        return iter((self.offset, self.inst_op, self.oparg))
+        return iter((self.offset, self.inst_op, self.oparg.value))
 
     def __str__(self):
         return f"({self.offset}, {self.inst_name}, {self.oparg})"
