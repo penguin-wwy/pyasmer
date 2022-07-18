@@ -9,7 +9,7 @@ if __name__ == '__main__':
     cw = CodeWriter(_find_and_load_unlocked.__code__)()
     cw.call_function(0, None, asm_global_var('print'), asm_fast_var('name'))
     cw.gen_code()
-    import ast
+    import ast  # noqa: F401, example code
     """
     output:
         ast

@@ -1,2 +1,18 @@
 [flake8]
-ignore = E731
+ignore =
+    ;E731 do not assign a lambda expression, use a def
+    E731
+
+exclude =
+    .tox,
+    .git,
+    __pycache__,
+    build*,
+    dist,
+    *.pyc,
+    *.egg-info,
+    .cache,
+    .eggs
+    ./tests/googletest
+
+max-line-length = 120
