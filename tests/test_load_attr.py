@@ -17,6 +17,7 @@ def test_insert_user_attr():
     cw: CodeWriter = insert_user_attr.writer
     return_value_index = [x for x in cw.find_index_by_inst_name('RETURN_VALUE')]
     assert len(return_value_index) == 1
-    cw.load_attribute(return_value_index[0], None, asm_fast_var('user'), asm_attr_var('name'))
+    cw.update_position(index=return_value_index[0])
+    cw.load_attribute(None, asm_fast_var('user'), asm_attr_var('name'))
     cw.gen_code()
     assert insert_user_attr(user) == 'bob'

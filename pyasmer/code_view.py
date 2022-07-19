@@ -67,17 +67,6 @@ class CodeViewer:
             self._inst_list.append(self._parse_inst(offset, inst_op, oparg))
         self._parse_jump()
 
-    def update_offset(self):
-        # TODO
-        for i in range(len(self._inst_list)):
-            self._inst_list[i].offset = i * 2
-
-    def insert_inst(self, index, inst_name, oparg=0):
-        pass
-
-    def gen_code(self):
-        pass
-
     def __call__(self, *args, **kwargs):
         self._parse_code()
         return self

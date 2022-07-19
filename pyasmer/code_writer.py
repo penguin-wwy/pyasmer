@@ -1,5 +1,5 @@
 import operator
-from typing import Optional
+from typing import Optional, Dict, List, Set
 
 from pyasmer.code_view import CodeViewer, HELP_MODULE
 from pyasmer.asm_instruction import AsmInstruction, AsmElement, asm_attr_var, asm_const_var, JumpInstruction
@@ -10,7 +10,26 @@ class CodeWriter(CodeViewer):
 
     def __init__(self, co):
         super(CodeWriter, self).__init__(co)
+        self._insert_position = 0
         self._inc_stack_size = 0
+        self._insert_map: Dict[int, List[AsmInstruction]] = dict()
+        self._delete_set: Set[int] = set()
+
+    def update_position(self, *, offset=0, index=0):
+        if offset > 0:
+            self._insert_position = self.offset_to_index(offset)
+        else:
+            assert index >= 0
+            self._insert_position = index
+
+    def update_offset(self):
+        # TODO
+        for i in range(len(self._inst_list)):
+            self._inst_list[i].offset = i * 2
+
+    @staticmethod
+    def offset_to_index(offset):
+        return offset // 2
 
     def _gen_inst(self, inst: AsmInstruction):
         offset, inst_op, oparg_value = inst
@@ -27,7 +46,24 @@ class CodeWriter(CodeViewer):
         return inst_op, oparg_value
 
     def gen_code(self):
+        new_inst_list = []
+        insert_index_list = [x for x in sorted(self._insert_map.keys())]
+        origin_seek = 0
+        for insert_index in insert_index_list:
+            for origin_inst in filter(lambda x: x not in self._delete_set, range(origin_seek, insert_index)):
+                new_inst_list.append(self._inst_list[origin_inst])
+            new_inst_list.extend(self._insert_map[insert_index])
+            origin_seek = insert_index
+        assert origin_seek < len(self._inst_list)
+        for origin_inst in filter(lambda x: x not in self._delete_set, range(origin_seek, len(self._inst_list))):
+            new_inst_list.append(self._inst_list[origin_inst])
+
+        self._inst_list = new_inst_list
+        self._insert_position = 0
+        self._insert_map.clear()
+        self._delete_set.clear()
         self.update_offset()
+
         import pyasmer._pyasmer
         code_bytes = []
         for item in map(lambda x: self._gen_inst(x), self._inst_list):
@@ -43,39 +79,45 @@ class CodeWriter(CodeViewer):
                                                   names_array=tuple(name_array),
                                                   stack_size=stack_size)
 
-    def insert_inst(self, index, inst_name, oparg=0):
-        # TODO: pass offset
-        self._inst_list.insert(index, AsmInstruction(index * 2, to_inst_op(inst_name), oparg))
+    def insert_inst(self, inst_name, oparg=0):
+        if self._insert_position not in self._insert_map:
+            self._insert_map[self._insert_position] = []
+        self._insert_map[self._insert_position].append(AsmInstruction(-1, to_inst_op(inst_name), oparg))
         # TODO: pass oparg
         # return opcode.stack_effect(HELP_MODULE.to_inst_op(inst_name))
 
-    def call_function(self, index, retval: Optional[AsmElement], function: AsmElement, *args: AsmElement):
-        next_index = function.gen_load_inst(self, index)
-        for arg in reversed(args):
-            next_index = arg.gen_load_inst(self, next_index)
-        self.insert_inst(next_index, 'CALL_FUNCTION', len(args))
-        next_index += 1
-        if retval:
-            next_index = retval.gen_store_inst(self, next_index)
+    def delete_inst(self, *, offset=None, index=None, total=1):
+        if offset is not None:
+            delete_from = self.offset_to_index(offset)
+        elif index is not None:
+            delete_from = index
         else:
-            self.insert_inst(index + len(args) + 2, 'POP_TOP')
-            next_index += 1
+            raise AssertionError("Invalid input for delete inst")
+        for i in range(total):
+            self._delete_set.add(delete_from + i)
+
+    def call_function(self, retval: Optional[AsmElement], function: AsmElement, *args: AsmElement):
+        function.gen_load_inst(self)
+        for arg in reversed(args):
+            arg.gen_load_inst(self)
+        self.insert_inst('CALL_FUNCTION', len(args))
+        if retval:
+            retval.gen_store_inst(self)
+        else:
+            self.insert_inst('POP_TOP')
         self._inc_stack_size = max(len(args) + 1, self._inc_stack_size)
-        return next_index
 
-    def load_attribute(self, index, dest: Optional[AsmElement], owner: AsmElement, attr_name: AsmElement):
-        next_index = owner.gen_load_inst(self, index)
+    def load_attribute(self, dest: Optional[AsmElement], owner: AsmElement, attr_name: AsmElement):
+        owner.gen_load_inst(self)
         assert isinstance(attr_name, asm_attr_var)
-        next_index = attr_name.gen_load_inst(self, next_index)
+        attr_name.gen_load_inst(self)
         if dest:
-            dest.gen_store_inst(self, next_index)
+            dest.gen_store_inst(self)
         self._inc_stack_size = max(1, self._inc_stack_size)
-        return next_index + 1
 
-    def return_value(self, index, retval: Optional[AsmElement]):
+    def return_value(self, retval: Optional[AsmElement]):
         if not retval:
             retval = asm_const_var(None)
-        next_index = retval.gen_load_inst(self, index)
-        self.insert_inst(next_index, 'RETURN_VALUE')
+        retval.gen_load_inst(self)
+        self.insert_inst('RETURN_VALUE')
         self._inc_stack_size = max(1, self._inc_stack_size)
-        return next_index + 1

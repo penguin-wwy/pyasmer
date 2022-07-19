@@ -15,7 +15,8 @@ def test_insert_print_result(capsys):
     store_fast_index = [x for x in cw.find_index_by_inst_name('STORE_FAST')]
     assert len(store_fast_index) == 1
     next_index = store_fast_index[0] + 1
-    cw.call_function(next_index, None, asm_global_var('print'), asm_fast_var('result'))
+    cw.update_position(index=next_index)
+    cw.call_function(None, asm_global_var('print'), asm_fast_var('result'))
     cw.gen_code()
     insert_print_result([])
     captured = capsys.readouterr()
@@ -35,7 +36,8 @@ def test_insert_sum_call():
     store_fast_index = [x for x in cw.find_index_by_inst_name('STORE_FAST')]
     assert len(store_fast_index) == 1
     next_index = store_fast_index[0] + 1
-    cw.call_function(next_index, asm_fast_var('result'), asm_global_var('sum'), asm_fast_var('inputs'))
+    cw.update_position(index=next_index)
+    cw.call_function(asm_fast_var('result'), asm_global_var('sum'), asm_fast_var('inputs'))
     cw.gen_code()
     assert insert_sum_call([1, 2, 3]) == 6
     assert origin_stack_size + 2 == insert_sum_call.function.__code__.co_stacksize
