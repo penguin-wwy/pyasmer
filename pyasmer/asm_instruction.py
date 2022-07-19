@@ -54,13 +54,11 @@ class AsmElement:
     def store_inst(self):
         return self._val_tp.store(), self._value
 
-    def gen_load_inst(self, cw, index):
-        cw.insert_inst(index, *self.load_inst)
-        return index + 1
+    def gen_load_inst(self, cw):
+        cw.insert_inst(*self.load_inst)
 
-    def gen_store_inst(self, cw, index):
-        cw.insert_inst(index, *self.store_inst)
-        return index + 1
+    def gen_store_inst(self, cw):
+        cw.insert_inst(*self.store_inst)
 
 
 class AsmFastVarElem(AsmElement):

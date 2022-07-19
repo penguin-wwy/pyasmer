@@ -26,11 +26,12 @@ if __name__ == '__main__':
     # Add a print statement to the beginning of the _find_and_load_unlocked function 
     # to print out the name of the module which to be imported
     #
-    # 0: The insertion position is at the beginning of the function(0 instruction)
+    # The insertion position is at the beginning of the function(0 instruction)
+    cw.update_position(offset=0)
     # None: Ignore return value
     # asm_global_var('print'): called function is print
     # asm_fast_var('name'): local variable `name` pass to print
-    cw.call_function(0, None, asm_global_var('print'), asm_fast_var('name'))
+    cw.call_function(None, asm_global_var('print'), asm_fast_var('name'))
     cw.gen_code()
     # Execute the import command
     import ast
@@ -69,11 +70,12 @@ if __name__ == '__main__':
     cw = CodeWriter(_find_and_load_unlocked.__code__)()
     # 在_find_and_load_unlocked函数开头添加一个print，将要被import的模块名称打印出来
     #
-    # 0: 表示插入位置在函数开头(第0条指令)
+    # 更新插入位置到函数开头(第0条指令)
+    cw.update_position(offset=0)
     # None: 忽略返回值
     # asm_global_var('print'): 调用的函数为print
     # asm_fast_var('name'): 将局部变量`name`传给print
-    cw.call_function(0, None, asm_global_var('print'), asm_fast_var('name'))
+    cw.call_function(None, asm_global_var('print'), asm_fast_var('name'))
     cw.gen_code()
     # 执行import命令
     import ast
