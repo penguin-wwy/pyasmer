@@ -21,3 +21,33 @@ def test_insert_user_attr():
     cw.load_attribute(None, asm_fast_var('user'), asm_attr_var('name'))
     cw.gen_code()
     assert insert_user_attr(user) == 'bob'
+
+
+"""
+transform to:
+  2           0 LOAD_FAST                0 (user)
+              2 LOAD_ATTR                0 (name)
+              4 STORE_FAST               1 (result)
+
+  3           6 LOAD_FAST                1 (result)
+              8 RETURN_VALUE
+"""
+@asm_writer
+def load_attr_to_local_variable(user: User):
+    user.name
+    return None
+
+
+def test_load_attr_to_local_variable():
+    user = User(name='bob', sex='unknown', age=-1)
+    cw: CodeWriter = load_attr_to_local_variable.writer
+    return_value_index = [x for x in cw.find_index_by_inst_name('RETURN_VALUE')]
+    assert len(return_value_index) == 1
+    cw.update_position(offset=4)
+    result = asm_fast_var('result')
+    result.gen_store_inst(cw)
+    result.gen_load_inst(cw)
+    cw.delete_inst(offset=4, total=2)  # delete origin instructions
+    cw.gen_code()
+    assert load_attr_to_local_variable(user) == 'bob'
+

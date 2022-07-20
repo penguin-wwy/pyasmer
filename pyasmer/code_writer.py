@@ -1,4 +1,3 @@
-import operator
 from typing import Optional, Dict, List, Set
 
 from pyasmer.code_view import CodeViewer, HELP_MODULE
@@ -37,8 +36,6 @@ class CodeWriter(CodeViewer):
             return inst_op, jump_oparg(offset, inst_op, inst.jump_target)
         for attr_name in CodeViewer.ATTR_NAMES:
             if getattr(HELP_MODULE, f"has_{attr_name}")(inst_op):
-                if attr_name == "local" and oparg_value not in self._local_map:
-                    raise NameError("TODO append variable")
                 attr_map = getattr(self, f"_{attr_name}_map")
                 if oparg_value not in attr_map:
                     attr_map[oparg_value] = len(attr_map)
@@ -68,15 +65,14 @@ class CodeWriter(CodeViewer):
         code_bytes = []
         for item in map(lambda x: self._gen_inst(x), self._inst_list):
             code_bytes.extend(item)
-        name_array = [x[0] for x in sorted(self._name_map.items(), key=operator.itemgetter(1))]
-        const_array = [x[0] for x in sorted(self._const_map.items(), key=operator.itemgetter(1))]
         stack_size = self._inc_stack_size + self._code_obj.co_stacksize \
             if self._inc_stack_size else self._code_obj.co_stacksize
         self._inc_stack_size = 0
         return pyasmer._pyasmer.reset_code_object(self._code_obj,
                                                   code_bytes=bytes(code_bytes),
-                                                  consts_array=tuple(const_array),
-                                                  names_array=tuple(name_array),
+                                                  consts_array=self._const_map.to_seq_if_inc(),
+                                                  names_array=self._name_map.to_seq_if_inc(),
+                                                  varnames_array=self._local_map.to_seq_if_inc(),
                                                   stack_size=stack_size)
 
     def insert_inst(self, inst_name, oparg=0):
