@@ -1,10 +1,11 @@
 import sys
 from types import CodeType
-from typing import List, Dict
+from typing import List, Any
 
 from pyasmer import op_help
 from pyasmer.asm_instruction import AsmInstruction, JumpInstruction
 from pyasmer.op_help import has_jabs, has_jrel, jump_target
+from pyasmer.structure import IncDict
 
 SELF_MODULE = sys.modules[__name__]
 HELP_MODULE = op_help
@@ -20,11 +21,25 @@ class CodeViewer:
     ATTR_NAMES = ("name", "const", "local")
 
     def __init__(self, co):
+        # Extract functions from methods.
+        if hasattr(co, '__func__'):
+            co = co.__func__
+        # Extract compiled code objects from...
+        if hasattr(co, '__code__'):  # ...a function, or
+            co = co.__code__
+        elif hasattr(co, 'gi_code'):  # ...a generator object, or
+            co = co.gi_code
+        elif hasattr(co, 'ag_code'):  # ...an asynchronous generator object, or
+            co = co.ag_code
+        elif hasattr(co, 'cr_code'):  # ...a coroutine.
+            co = co.cr_code
+        assert isinstance(co, CodeType)
         self._code_obj: CodeType = co
         self._inst_list: List[AsmInstruction] = []
-        self._name_map: Dict
-        self._const_map: Dict
-        self._local_map: Dict
+        self._name_map: IncDict[str, int] = IncDict().init_by_seq(self._code_obj.co_names)
+        self._const_map: IncDict[Any, int] = IncDict().init_by_seq(self._code_obj.co_consts)
+        self._local_map: IncDict[str, int] = IncDict().init_by_seq(self._code_obj.co_varnames)
+        self.parse_code()
 
     def get_name(self, index):
         return self._code_obj.co_names[index]
@@ -59,16 +74,12 @@ class CodeViewer:
                 return AsmInstruction(offset, inst_op, getattr(self, f"get_{attr_name}")(oparg))
         return AsmInstruction(offset, inst_op, oparg)
 
-    def _parse_code(self):
-        self._name_map = {self.get_name(i): i for i in range(len(self._code_obj.co_names))}
-        self._const_map = {self.get_const(i): i for i in range(len(self._code_obj.co_consts))}
-        self._local_map = {self.get_local(i): i for i in range(len(self._code_obj.co_varnames))}
+    def parse_code(self):
         for offset, (inst_op, oparg) in _inst_chunks(self._code_obj.co_code):
             self._inst_list.append(self._parse_inst(offset, inst_op, oparg))
         self._parse_jump()
 
     def __call__(self, *args, **kwargs):
-        self._parse_code()
         return self
 
     def __str__(self):
