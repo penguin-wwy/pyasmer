@@ -2,7 +2,7 @@ import enum
 import sys
 from typing import Optional
 
-from pyasmer.op_help import is_abs_jump, to_inst_name
+from pyasmer.op_help import is_abs_jump, to_inst_name, to_inst_op
 
 _SELF_MODULE = sys.modules[__name__]
 
@@ -60,6 +60,12 @@ class AsmElement:
     def gen_store_inst(self, cw):
         cw.insert_inst(*self.store_inst)
 
+    def __eq__(self, other):
+        if isinstance(other, AsmElement):
+            return self._value == other._value
+        else:
+            return self._value == other
+
 
 class AsmFastVarElem(AsmElement):
 
@@ -71,6 +77,12 @@ class AsmConstVarElem(AsmElement):
 
     def __init__(self, cnt_val):
         super(AsmConstVarElem, self).__init__(cnt_val, AsmElemType.ASM_CONST)
+
+
+class AsmNameVarElem(AsmElement):
+
+    def __init__(self, name_str):
+        super(AsmNameVarElem, self).__init__(name_str, AsmElemType.ASM_NAME)
 
 
 class AsmGlobalVarElem(AsmElement):
@@ -88,6 +100,7 @@ class AsmAttrVarElem(AsmElement):
 asm_default_var = lambda o: AsmElement(o, AsmElemType.ASM_DEFAULT)
 asm_fast_var = AsmFastVarElem
 asm_const_var = AsmConstVarElem
+asm_name_var = AsmNameVarElem
 asm_global_var = AsmGlobalVarElem
 asm_attr_var = AsmAttrVarElem
 
@@ -108,6 +121,20 @@ class AsmInstruction:
 
     def __str__(self):
         return f"({self.offset}, {self.inst_name}, {self.oparg})"
+
+    def _update(self, *, inst_name=None, inst_op=None, oparg=None, offset=None):
+        assert not inst_name or not inst_op or to_inst_name(inst_op) == inst_name
+        if inst_name:
+            self.inst_name = inst_name
+            self.inst_op = to_inst_op(inst_name)
+        if inst_op:
+            self.inst_op = inst_op
+            self.inst_name = to_inst_name(inst_op)
+        if oparg:
+            self.oparg = _get_suffix_type(self.inst_name).contribute(oparg) \
+                if not isinstance(oparg, AsmElement) else oparg
+        if offset:
+            self.offset = offset
 
     def promote(self, cls, *args):
         self.__class__ = cls

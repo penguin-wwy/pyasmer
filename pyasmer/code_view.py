@@ -1,11 +1,12 @@
+import operator
 import sys
 from types import CodeType
-from typing import List, Any
+from typing import List, Any, Callable
 
 from pyasmer import op_help
 from pyasmer.asm_instruction import AsmInstruction, JumpInstruction
 from pyasmer.op_help import has_jabs, has_jrel, jump_target
-from pyasmer.structure import IncDict
+from pyasmer.structure import IncDict, DefaultDict
 
 SELF_MODULE = sys.modules[__name__]
 HELP_MODULE = op_help
@@ -50,17 +51,6 @@ class CodeViewer:
     def get_local(self, index):
         return self._code_obj.co_varnames[index]
 
-    def find_inst_by_offset(self, offset):
-        if self._inst_list[offset // 2].offset == offset:
-            return self._inst_list[offset // 2]
-        else:
-            raise AssertionError("Offset error")
-
-    def find_index_by_inst_name(self, inst_name):
-        for i in range(len(self._inst_list)):
-            if self._inst_list[i].inst_name == inst_name:
-                yield i
-
     def _parse_jump(self):
         for inst in self._inst_list:
             if has_jabs(inst.inst_op) or has_jrel(inst.inst_op):
@@ -84,3 +74,54 @@ class CodeViewer:
 
     def __str__(self):
         return "\n".join(str(x) for x in self._inst_list)
+
+    def __iter__(self):
+        return iter(self._inst_list)
+
+    def find_inst_by_offset(self, offset):
+        if self._inst_list[offset // 2].offset == offset:
+            return self._inst_list[offset // 2]
+        else:
+            raise AssertionError("Offset error")
+
+    def find_index_by_inst_name(self, *inst_names):
+        inst_names = set(inst_names)
+        for i in range(len(self._inst_list)):
+            if self._inst_list[i].inst_name in inst_names:
+                yield i
+
+    def find_snippet_by_expression(self, source_code: str, *, local_vars=None, global_vars=None):
+        if local_vars is None:
+            local_vars = []
+        if global_vars is None:
+            global_vars = []
+        match_code = compile(source_code, '<exp>', 'eval')
+        match_viewer = CodeViewer(match_code)
+        match_len = len(match_viewer._inst_list) - 1  # TODO
+
+        asm_inst: AsmInstruction
+        for asm_inst in filter(lambda inst: inst.inst_name == "LOAD_NAME", match_viewer):
+            if asm_inst.oparg.value in local_vars:
+                getattr(asm_inst, '_update')(inst_name="LOAD_FAST")
+            elif asm_inst.oparg.value in global_vars:
+                getattr(asm_inst, '_update')(inst_name="LOAD_GLOBAL")
+
+        def match_one(match_inst: AsmInstruction, do: Callable):
+            for pos in filter(lambda x: self._inst_list[x].oparg == match_inst.oparg,
+                              self.find_index_by_inst_name(match_inst.inst_name)):
+                do(pos)
+
+        result: DefaultDict[int, List] = DefaultDict.create(lambda: [])
+        match_one(match_viewer._inst_list[0], lambda p: result[p].append(p))
+
+        def append_next(pos):
+            if pos - 1 in result:
+                result[pos] = result[pos - 1]
+                result[pos].append(pos)
+                del result[pos - 1]
+        for asm_inst in match_viewer._inst_list[1:match_len]:
+            match_one(asm_inst, append_next)
+
+        for item in sorted(result.items(), key=operator.itemgetter(0)):
+            if len(item[1]) == match_len:
+                yield item[1][0], item[1][-1]
