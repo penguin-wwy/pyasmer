@@ -1,5 +1,5 @@
 import operator
-from typing import Sequence, Tuple, Optional
+from typing import Sequence, Tuple, Optional, Callable
 
 
 class IncDict(dict):
@@ -26,3 +26,19 @@ class IncDict(dict):
     @property
     def inc(self):
         return self._inc_count
+
+
+class DefaultDict(dict):
+
+    _default_func: Callable = lambda: None
+
+    @staticmethod
+    def create(f: Callable):
+        d = DefaultDict()
+        d._default_func = f
+        return d
+
+    def __getitem__(self, item):
+        if item not in self:
+            self.__setitem__(item, self._default_func())
+        return super(DefaultDict, self).__getitem__(item)
