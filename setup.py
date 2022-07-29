@@ -22,8 +22,8 @@ PYASMER_EXTENSION = Extension(
 
 setup(
     name="pyasmer",
-    author_email="940375606@qq.com",
-    version="0.1",
+    author_email="penguin.wenyang.wang@gmail.com",
+    version="0.1.0",
     python_requires=">=3.6,<3.11",
     description="pyasmer",
     long_description="",
