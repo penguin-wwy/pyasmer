@@ -20,13 +20,16 @@ PYASMER_EXTENSION = Extension(
     undef_macros=[],
 )
 
+with open("README.md", "r") as fp:
+    long_desc = ''.join(fp.readlines())
+
 setup(
     name="pyasmer",
     author_email="penguin.wenyang.wang@gmail.com",
-    version="0.1.0",
+    version="0.1.1",
     python_requires=">=3.6,<3.11",
     description="pyasmer",
-    long_description="",
+    long_description=long_desc,
     long_description_content_type="text/markdown",
     url="https://github.com/penguin-wwy/pyasmer",
     author="penguin-wwy",
