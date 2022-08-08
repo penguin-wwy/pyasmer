@@ -42,6 +42,9 @@ class CodeViewer:
         self._local_map: IncDict[str, int] = IncDict().init_by_seq(self._code_obj.co_varnames)
         self.parse_code()
 
+    def total_size(self):
+        return len(self._inst_list)
+
     def get_name(self, index):
         return self._code_obj.co_names[index]
 

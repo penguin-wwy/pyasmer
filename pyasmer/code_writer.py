@@ -111,6 +111,27 @@ class CodeWriter(CodeViewer):
             dest.gen_store_inst(self)
         self._inc_stack_size = max(1, self._inc_stack_size)
 
+    BINARY_INST = {
+        "+": "BINARY_ADD",
+        "-": "BINARY_SUBTRACT",
+        "*": "BINARY_MULTIPLY",
+        "/": "BINARY_TRUE_DIVIDE",
+        "//": "BINARY_FLOOR_DIVIDE",
+        "%": "BINARY_MODULO",
+        "@": "BINARY_MATRIX_MULTIPLY",
+        "^": "BINARY_XOR",
+        "&": "BINARY_AND",
+        "|": "BINARY_OR",
+    }
+
+    def binary_op(self, dest: Optional[AsmElement], left: AsmElement, right: AsmElement, op_name: str):
+        left.gen_load_inst(self)
+        right.gen_load_inst(self)
+        self.insert_inst(self.BINARY_INST[op_name])
+        if dest:
+            dest.gen_store_inst(self)
+        self._inc_stack_size = max(2, self._inc_stack_size)
+
     def return_value(self, retval: Optional[AsmElement]):
         if not retval:
             retval = asm_const_var(None)
