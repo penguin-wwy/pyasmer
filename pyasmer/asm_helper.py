@@ -4,8 +4,8 @@ from pyasmer.code_view import CodeViewer
 from pyasmer.code_writer import CodeWriter
 
 
-FunctionAndViewer = namedtuple('FunctionAndViewer', ['function', 'viewer'])
-FunctionAndWriter = namedtuple('FunctionAndWriter', ['function', 'writer'])
+FunctionAndViewer = namedtuple("FunctionAndViewer", ["function", "viewer"])
+FunctionAndWriter = namedtuple("FunctionAndWriter", ["function", "writer"])
 
 
 class AsmViewer(FunctionAndViewer):

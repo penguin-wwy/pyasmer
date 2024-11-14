@@ -6,7 +6,7 @@ class IncDict(dict):
 
     _inc_count = 0
 
-    def init_by_seq(self, inputs: Sequence) -> 'IncDict':
+    def init_by_seq(self, inputs: Sequence) -> "IncDict":
         for idx, item in enumerate(inputs):
             self[item] = idx
         self._inc_count = 0

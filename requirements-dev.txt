@@ -1,2 +1,5 @@
 setuptools
+wheel
+black
+pybind11
 pytest

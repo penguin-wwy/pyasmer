@@ -1,7 +1,13 @@
 from typing import Optional, Dict, List, Set
 
 from pyasmer.code_view import CodeViewer, HELP_MODULE
-from pyasmer.asm_instruction import AsmInstruction, AsmElement, asm_attr_var, asm_const_var, JumpInstruction
+from pyasmer.asm_instruction import (
+    AsmInstruction,
+    AsmElement,
+    asm_attr_var,
+    asm_const_var,
+    JumpInstruction,
+)
 from pyasmer.op_help import to_inst_op, jump_oparg
 
 
@@ -47,12 +53,17 @@ class CodeWriter(CodeViewer):
         insert_index_list = [x for x in sorted(self._insert_map.keys())]
         origin_seek = 0
         for insert_index in insert_index_list:
-            for origin_inst in filter(lambda x: x not in self._delete_set, range(origin_seek, insert_index)):
+            for origin_inst in filter(
+                lambda x: x not in self._delete_set, range(origin_seek, insert_index)
+            ):
                 new_inst_list.append(self._inst_list[origin_inst])
             new_inst_list.extend(self._insert_map[insert_index])
             origin_seek = insert_index
         assert origin_seek < len(self._inst_list)
-        for origin_inst in filter(lambda x: x not in self._delete_set, range(origin_seek, len(self._inst_list))):
+        for origin_inst in filter(
+            lambda x: x not in self._delete_set,
+            range(origin_seek, len(self._inst_list)),
+        ):
             new_inst_list.append(self._inst_list[origin_inst])
 
         self._inst_list = new_inst_list
@@ -62,23 +73,31 @@ class CodeWriter(CodeViewer):
         self.update_offset()
 
         import pyasmer._pyasmer
+
         code_bytes = []
         for item in map(lambda x: self._gen_inst(x), self._inst_list):
             code_bytes.extend(item)
-        stack_size = self._inc_stack_size + self._code_obj.co_stacksize \
-            if self._inc_stack_size else self._code_obj.co_stacksize
+        stack_size = (
+            self._inc_stack_size + self._code_obj.co_stacksize
+            if self._inc_stack_size
+            else self._code_obj.co_stacksize
+        )
         self._inc_stack_size = 0
-        return pyasmer._pyasmer.reset_code_object(self._code_obj,
-                                                  code_bytes=bytes(code_bytes),
-                                                  consts_array=self._const_map.to_seq_if_inc(),
-                                                  names_array=self._name_map.to_seq_if_inc(),
-                                                  varnames_array=self._local_map.to_seq_if_inc(),
-                                                  stack_size=stack_size)
+        return pyasmer._pyasmer.reset_code_object(
+            self._code_obj,
+            code_bytes=bytes(code_bytes),
+            consts_array=self._const_map.to_seq_if_inc(),
+            names_array=self._name_map.to_seq_if_inc(),
+            varnames_array=self._local_map.to_seq_if_inc(),
+            stack_size=stack_size,
+        )
 
     def insert_inst(self, inst_name, oparg=0):
         if self._insert_position not in self._insert_map:
             self._insert_map[self._insert_position] = []
-        self._insert_map[self._insert_position].append(AsmInstruction(-1, to_inst_op(inst_name), oparg))
+        self._insert_map[self._insert_position].append(
+            AsmInstruction(-1, to_inst_op(inst_name), oparg)
+        )
         # TODO: pass oparg
         # return opcode.stack_effect(HELP_MODULE.to_inst_op(inst_name))
 
@@ -92,18 +111,22 @@ class CodeWriter(CodeViewer):
         for i in range(total):
             self._delete_set.add(delete_from + i)
 
-    def call_function(self, retval: Optional[AsmElement], function: AsmElement, *args: AsmElement):
+    def call_function(
+        self, retval: Optional[AsmElement], function: AsmElement, *args: AsmElement
+    ):
         function.gen_load_inst(self)
         for arg in reversed(args):
             arg.gen_load_inst(self)
-        self.insert_inst('CALL_FUNCTION', len(args))
+        self.insert_inst("CALL_FUNCTION", len(args))
         if retval:
             retval.gen_store_inst(self)
         else:
-            self.insert_inst('POP_TOP')
+            self.insert_inst("POP_TOP")
         self._inc_stack_size = max(len(args) + 1, self._inc_stack_size)
 
-    def load_attribute(self, dest: Optional[AsmElement], owner: AsmElement, attr_name: AsmElement):
+    def load_attribute(
+        self, dest: Optional[AsmElement], owner: AsmElement, attr_name: AsmElement
+    ):
         owner.gen_load_inst(self)
         assert isinstance(attr_name, asm_attr_var)
         attr_name.gen_load_inst(self)
@@ -124,7 +147,13 @@ class CodeWriter(CodeViewer):
         "|": "BINARY_OR",
     }
 
-    def binary_op(self, dest: Optional[AsmElement], left: AsmElement, right: AsmElement, op_name: str):
+    def binary_op(
+        self,
+        dest: Optional[AsmElement],
+        left: AsmElement,
+        right: AsmElement,
+        op_name: str,
+    ):
         left.gen_load_inst(self)
         right.gen_load_inst(self)
         self.insert_inst(self.BINARY_INST[op_name])
@@ -136,5 +165,5 @@ class CodeWriter(CodeViewer):
         if not retval:
             retval = asm_const_var(None)
         retval.gen_load_inst(self)
-        self.insert_inst('RETURN_VALUE')
+        self.insert_inst("RETURN_VALUE")
         self._inc_stack_size = max(1, self._inc_stack_size)

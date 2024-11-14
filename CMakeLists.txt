@@ -2,38 +2,42 @@ cmake_minimum_required(VERSION 3.21)
 project(pyasmer C)
 
 set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 17)
 
-if(NOT DEFINED PYTHON_PREFIX_PATH)
-    message(FATAL_ERROR "PYTHON_PREFIX_PATH should be define")
-endif()
+find_package(Python3 COMPONENTS Interpreter Development)
 
-set(PYTHON_CONFIG "${PYTHON_PREFIX_PATH}/bin/python3-config")
-set(INCLUDE_ARGUMENT "--includes")
-execute_process(
-        COMMAND ${PYTHON_CONFIG} ${INCLUDE_ARGUMENT}
-        OUTPUT_VARIABLE PYTHON_INCLUDES
+message(STATUS "Python3_EXECUTABLE: ${Python3_EXECUTABLE}")
+message(STATUS "Python3_INCLUDE_DIRS: ${Python3_INCLUDE_DIRS}")
+message(STATUS "Python3_LIBRARIES: ${Python3_LIBRARIES}")
+message(STATUS "Python3_LIBRARY_DIRS: ${Python3_LIBRARY_DIRS}")
+
+find_package(pybind11 REQUIRED PATHS ${Python3_SITELIB})
+
+message(STATUS "pybind11_VERSION: ${pybind11_VERSION}")
+message(STATUS "pybind11_INCLUDE_DIRS: ${pybind11_INCLUDE_DIRS}")
+message(STATUS "pybind11_DEFINITIONS: ${pybind11_DEFINITIONS}")
+
+function(py_bind_module library_name source_files library_dep output_name)
+    add_library(${library_name} SHARED ${source_files})
+    target_include_directories(
+            ${library_name}
+            PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${PROJECT_SOURCE_DIR}/include
+            ${Python3_INCLUDE_DIRS})
+    target_link_libraries(
+            ${library_name}
+            PRIVATE
+            ${library_dep}
+            pybind11::headers
+            ${Python3_LIBRARIES})
+    # target_link_options(${library_name} PRIVATE -static-libgcc -static-libstdc++)
+    set_target_properties(${library_name} PROPERTIES PREFIX "")
+    set_target_properties(${library_name} PROPERTIES OUTPUT_NAME ${output_name})
+    set_target_properties(${library_name} PROPERTIES SUFFIX ".so")
+endfunction()
+
+set(sources
+    src/pyasmer.c
 )
-string(REPLACE "\n" "" PYTHON_INCLUDES ${PYTHON_INCLUDES})
-string(REPLACE "/" ";" PYTHON_INCLUDES_STRINGS ${PYTHON_INCLUDES})
-list(GET PYTHON_INCLUDES_STRINGS -1 PYTHON_VERSION)
-message(STATUS "VERSION = ${PYTHON_VERSION}")
-
-set(LDFLAGS_ARGUMENT "--ldflags")
-execute_process(
-        COMMAND ${PYTHON_CONFIG} ${LDFLAGS_ARGUMENT}
-        OUTPUT_VARIABLE PYTHON_LDFLAGS
-)
-string(REPLACE "\n" "" PYTHON_LDFLAGS ${PYTHON_LDFLAGS})
-string(STRIP ${PYTHON_LDFLAGS} PYTHON_LDFLAGS)
-message(STATUS "LDFLAGS = ${PYTHON_LDFLAGS}")
-
-include_directories(
-        ${PYTHON_PREFIX_PATH}/include/${PYTHON_VERSION}
-        ${CMAKE_SOURCE_DIR}/include
-)
-
-file(GLOB NATIVE_FILES src/*.c)
-
-add_library(_pyasmer SHARED ${NATIVE_FILES})
-target_link_libraries(_pyasmer "${PYTHON_LDFLAGS}")
-set_target_properties(_pyasmer PROPERTIES PREFIX "")
+py_bind_module(_pyasmer "${sources}" "" "_pyasmer")

@@ -14,7 +14,7 @@ HELP_MODULE = op_help
 
 def _inst_chunks(code_array: bytes):
     for i in range(0, len(code_array), 2):
-        yield i, code_array[i:i + 2]
+        yield i, code_array[i : i + 2]
 
 
 class CodeViewer:
@@ -23,23 +23,29 @@ class CodeViewer:
 
     def __init__(self, co):
         # Extract functions from methods.
-        if hasattr(co, '__func__'):
+        if hasattr(co, "__func__"):
             co = co.__func__
         # Extract compiled code objects from...
-        if hasattr(co, '__code__'):  # ...a function, or
+        if hasattr(co, "__code__"):  # ...a function, or
             co = co.__code__
-        elif hasattr(co, 'gi_code'):  # ...a generator object, or
+        elif hasattr(co, "gi_code"):  # ...a generator object, or
             co = co.gi_code
-        elif hasattr(co, 'ag_code'):  # ...an asynchronous generator object, or
+        elif hasattr(co, "ag_code"):  # ...an asynchronous generator object, or
             co = co.ag_code
-        elif hasattr(co, 'cr_code'):  # ...a coroutine.
+        elif hasattr(co, "cr_code"):  # ...a coroutine.
             co = co.cr_code
         assert isinstance(co, CodeType)
         self._code_obj: CodeType = co
         self._inst_list: List[AsmInstruction] = []
-        self._name_map: IncDict[str, int] = IncDict().init_by_seq(self._code_obj.co_names)
-        self._const_map: IncDict[Any, int] = IncDict().init_by_seq(self._code_obj.co_consts)
-        self._local_map: IncDict[str, int] = IncDict().init_by_seq(self._code_obj.co_varnames)
+        self._name_map: IncDict[str, int] = IncDict().init_by_seq(
+            self._code_obj.co_names
+        )
+        self._const_map: IncDict[Any, int] = IncDict().init_by_seq(
+            self._code_obj.co_consts
+        )
+        self._local_map: IncDict[str, int] = IncDict().init_by_seq(
+            self._code_obj.co_varnames
+        )
         self.parse_code()
 
     def total_size(self):
@@ -64,7 +70,9 @@ class CodeViewer:
     def _parse_inst(self, offset, inst_op, oparg) -> AsmInstruction:
         for attr_name in CodeViewer.ATTR_NAMES:
             if getattr(HELP_MODULE, f"has_{attr_name}")(inst_op):
-                return AsmInstruction(offset, inst_op, getattr(self, f"get_{attr_name}")(oparg))
+                return AsmInstruction(
+                    offset, inst_op, getattr(self, f"get_{attr_name}")(oparg)
+                )
         return AsmInstruction(offset, inst_op, oparg)
 
     def parse_code(self):
@@ -93,25 +101,31 @@ class CodeViewer:
             if self._inst_list[i].inst_name in inst_names:
                 yield i
 
-    def find_snippet_by_expression(self, source_code: str, *, local_vars=None, global_vars=None):
+    def find_snippet_by_expression(
+        self, source_code: str, *, local_vars=None, global_vars=None
+    ):
         if local_vars is None:
             local_vars = []
         if global_vars is None:
             global_vars = []
-        match_code = compile(source_code, '<exp>', 'eval')
+        match_code = compile(source_code, "<exp>", "eval")
         match_viewer = CodeViewer(match_code)
         match_len = len(match_viewer._inst_list) - 1  # TODO
 
         asm_inst: AsmInstruction
-        for asm_inst in filter(lambda inst: inst.inst_name == "LOAD_NAME", match_viewer):
+        for asm_inst in filter(
+            lambda inst: inst.inst_name == "LOAD_NAME", match_viewer
+        ):
             if asm_inst.oparg.value in local_vars:
-                getattr(asm_inst, '_update')(inst_name="LOAD_FAST")
+                getattr(asm_inst, "_update")(inst_name="LOAD_FAST")
             elif asm_inst.oparg.value in global_vars:
-                getattr(asm_inst, '_update')(inst_name="LOAD_GLOBAL")
+                getattr(asm_inst, "_update")(inst_name="LOAD_GLOBAL")
 
         def match_one(match_inst: AsmInstruction, do: Callable):
-            for pos in filter(lambda x: self._inst_list[x].oparg == match_inst.oparg,
-                              self.find_index_by_inst_name(match_inst.inst_name)):
+            for pos in filter(
+                lambda x: self._inst_list[x].oparg == match_inst.oparg,
+                self.find_index_by_inst_name(match_inst.inst_name),
+            ):
                 do(pos)
 
         result: DefaultDict[int, List] = DefaultDict.create(lambda: [])
@@ -122,6 +136,7 @@ class CodeViewer:
                 result[pos] = result[pos - 1]
                 result[pos].append(pos)
                 del result[pos - 1]
+
         for asm_inst in match_viewer._inst_list[1:match_len]:
             match_one(asm_inst, append_next)
 

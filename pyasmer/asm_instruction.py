@@ -6,15 +6,15 @@ from pyasmer.op_help import is_abs_jump, to_inst_name, to_inst_op
 
 _SELF_MODULE = sys.modules[__name__]
 
-_ELEM_LOAD = [None, 'LOAD_FAST', 'LOAD_CONST', 'LOAD_NAME', 'LOAD_GLOBAL', 'LOAD_ATTR']
-_ELEM_STORE = [None, 'STORE_FAST', '', 'STORE_NAME', 'STORE_GLOBAL', 'STORE_ATTR']
+_ELEM_LOAD = [None, "LOAD_FAST", "LOAD_CONST", "LOAD_NAME", "LOAD_GLOBAL", "LOAD_ATTR"]
+_ELEM_STORE = [None, "STORE_FAST", "", "STORE_NAME", "STORE_GLOBAL", "STORE_ATTR"]
 
 
 class _AsmElemTypeMeta(enum.EnumMeta):
 
     def __getitem__(self, item):
         if item not in self._member_map_:
-            return self._member_map_['ASM_DEFAULT']
+            return self._member_map_["ASM_DEFAULT"]
         return self._member_map_[item]
 
 
@@ -113,7 +113,11 @@ class AsmInstruction:
     def __init__(self, offset, inst_op, oparg):
         self.inst_name = to_inst_name(inst_op)
         self.inst_op = inst_op
-        self.oparg = _get_suffix_type(self.inst_name).contribute(oparg) if not isinstance(oparg, AsmElement) else oparg
+        self.oparg = (
+            _get_suffix_type(self.inst_name).contribute(oparg)
+            if not isinstance(oparg, AsmElement)
+            else oparg
+        )
         self.offset = offset
 
     def __iter__(self):
@@ -131,8 +135,11 @@ class AsmInstruction:
             self.inst_op = inst_op
             self.inst_name = to_inst_name(inst_op)
         if oparg:
-            self.oparg = _get_suffix_type(self.inst_name).contribute(oparg) \
-                if not isinstance(oparg, AsmElement) else oparg
+            self.oparg = (
+                _get_suffix_type(self.inst_name).contribute(oparg)
+                if not isinstance(oparg, AsmElement)
+                else oparg
+            )
         if offset:
             self.offset = offset
 
@@ -152,7 +159,7 @@ class JumpInstruction(AsmInstruction):
         return self._jump_target.offset
 
     @classmethod
-    def promote_by(cls, inst: 'JumpInstruction', target: AsmInstruction):
+    def promote_by(cls, inst: "JumpInstruction", target: AsmInstruction):
         inst._hax_next = not is_abs_jump(inst.inst_name)
         inst._jump_target = target
         return inst
